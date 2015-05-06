@@ -1,0 +1,1 @@
+This is a repository for containing code for a prototype digital vocoder.
