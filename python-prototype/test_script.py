@@ -3,16 +3,44 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import jsignal as jsig
 
-nPts = 1000
+# parameters
 fn = 1000.0
 wn = 2 * np.pi * fn
+w = wn
 fs = 44100.0
+t0 = 0
+tEnd = 2 * np.pi / wn
+nPts = round((tEnd - t0) * fs)
+t = np.linspace(t0, tEnd, nPts)
+
+# calculate test signal
+x = np.cos(w * t)
+
+# calculate oscillators
+qosc = np.sin(wn * t)
+iosc = np.cos(wn * t)
+
+# calculate lowpass filter coeffiecients
+n = 100
 fc = 20.0
 cutoff = fc / fs
-n = 100
-t = np.linspace(0, 2*np.pi, nPts)
-sinosc = np.sin(wn * t)
-cososc = np.cos(wn * t)
 b = signal.firwin(n, cutoff, window = 'hamming')
+
+# modulate the test signal
+xmodi = iosc * x
+xmodq = qosc * x
+
+# lowpass filter the modulated signal
+lpmodi = signal.convolve(xmodi, b, 'same')
+lpmodq = signal.convolve(xmodq, b, 'same')
+
+# display results
+
+
+# plot results
+plt.figure()
+plt.stem(t, iosc)
+jsig.pltmagspect(xmodi)
 jsig.pltfreqz(b)
+jsig.pltmagspect(lpmodi)
 plt.show()
