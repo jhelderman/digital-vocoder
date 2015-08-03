@@ -31,8 +31,8 @@ xmodi = iosc * x
 xmodq = qosc * x
 
 # lowpass filter the modulated signal
-lpmodi = signal.convolve(xmodi, b, 'same')
-lpmodq = signal.convolve(xmodq, b, 'same')
+lpmodi = signal.lfilter(b, 1, xmodi)
+lpmodq = signal.lfilter(b, 1, xmodq)
 
 # display results
 

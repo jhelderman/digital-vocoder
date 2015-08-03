@@ -3,7 +3,7 @@ from scipy import signal
 import matplotlib.pyplot as plt
 
 def pltfreqz(b, a = 1):
-    """Plot the frequency of a digital filter
+    """Plot the frequency response of a digital filter
 
     Inputs:
     b - transfer function denominator coefficients
