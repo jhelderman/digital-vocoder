@@ -21,3 +21,4 @@ class Synthesizer:
         phase: a float representing the phase found using analyzer.py
         '''
         return mag * np.cos(self.wn * t + phase)
+        # return mag * np.cos(phase)

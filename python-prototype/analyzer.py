@@ -1,5 +1,7 @@
 import numpy as np
 from scipy import signal
+import jsignal as jsig
+import matplotlib.pyplot as plt
 
 class Analyzer:
     """
@@ -12,13 +14,13 @@ class Analyzer:
     bLowpass - the filter coeficients for the lowpass filter used in the 
                implemntation of this analyzer
     """
-    bdiff = np.array([1, -1])
 
     def __init__(self, wn, bLowpass):
         self.wn = float(wn)
         self.bLowpass = bLowpass
+        jsig.plt_freqz(bLowpass, title='Analyzer Lowpass Filter Frequency Response')
 
-    def analyze(self, x, t, T):
+    def analyze(self, x, t):
         '''
         analyze(self, x, t, T): analyze the given signal using the procedure 
         outlined in "Phase Vocoder" by Flanagan and Golden
@@ -27,6 +29,7 @@ class Analyzer:
         x: a one dimensional numpy array that represents the given signal
         t: a one dimensional numpy array of the same size as x that 
            represents the time values at which the samples of x were taken
+        T: 
         '''
         # check to make sure x and t are the same size
         if x.size != t.size:
@@ -38,14 +41,23 @@ class Analyzer:
         xmodq = x * qlo
         xmodi = x * ilo
         # lowpass filter the modulated signal
-        a = signal.lfilter(bLowpass, 1, xmodi)
-        b = signal.lfilter(bLowpass, 1, xmodq)
-        # calculate delta a and delta b using a derivative filter
-        da = signal.lfilter(bdiff, 1, xmodi)
-        db = signal.lfilter(bdiff, 1, xmodq)
+        a = signal.lfilter(self.bLowpass, 1, xmodi)
+        b = signal.lfilter(self.bLowpass, 1, xmodq)
+        plt.figure()
+        jsig.plt_time_and_mag(a, title='Lowpass Filtered Imod Signal')
+        plt.figure()
+        jsig.plt_time_and_mag(b, title='Lowpass Filtered Qmod Signal')
+        # # calculate delta a and delta b using a derivative filter
+        # da = np.gradient(xmodi)
+        # db = np.gradient(xmodq)
         # estimate the magnitude spectrum at wn
-        mag = np.sqrt(a ** 2 + b ** 2)
+        mag = 2. * np.sqrt(a ** 2 + b ** 2)
+        plt.figure()
+        jsig.plt_time_signal(mag, title='Magnitude Estimate')
         # estimate the phase spectrum at wn
-        phase = (b * da - a * db) / (T * (a ** 2 + b ** 2))
+        # phase = (b * da - a * db) / (T * (a ** 2 + b ** 2))
+        phase = -np.arctan2(b, a)
+        plt.figure()
+        jsig.plt_time_signal(phase, title='Phase Estimate')
         # return the magnitude, phase tuple
         return mag, phase

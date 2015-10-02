@@ -1,24 +1,37 @@
 import numpy as np
+import scipy.signal as signal
 from analyzer import Analyzer
 from synthesizer import Synthesizer
 
 class PhaseVocoder:
-    # class constants
-    #TODO: decide on filter parameters for the low-pass filter
-    bLowpass = np.array([])
+    # default class members
+    ntaps = 401  # number of low-pass filter taps
+    fc = 20.0  # cutoff frequency of the filter in Hz
+    fs = 44100.
 
     # Constructor
 
-    def __init__(self, w):
+    def __init__(self, w, fs=None):
         # extract information from the input
-        N = len(w)
+        N = w.size
+        # sampling frequency
+        if fs != None:
+            self.fs = fs
+        # get the filter coefficients
+        cutoff = self.fc / self.fs
+        percent_transition = 15.
+        fstop = cutoff * (1 + percent_transition)
+        # self.bLowpass = signal.firwin(self.ntaps, cutoff, window = 'hamming')
+        fspec = [0., cutoff, fstop, 0.5]
+        aspec = [1., 0.]
+        self.bLowpass = signal.remez(self.ntaps, fspec, aspec)
         # initialize member variables
         self.initialize_analyzers(w, [self.bLowpass] * N)
         self.initialize_synthesizers(w)
 
     ### initialization methods
 
-    def initialize_analyzers(self, w_list, bLowpass_list):
+    def initialize_analyzers(self, w, bLowpass_list):
         '''
         initialize_analyzers(self, w_list, bLowpass_list): initialize each
         analyzer in the vocoder based on the given center frequencies and 
@@ -31,18 +44,18 @@ class PhaseVocoder:
                        analyzers
         '''
         # validate the inputs
-        if len(w_list) != len(bLowpass_list):
+        if w.size != len(bLowpass_list):
             raise ValueError('w_list and bLowpass_list must be the same '
                              'length')
         else:
-            N = len(w_list)
+            N = w.size
         # initialize the analyzers
         analyzers = []
         for n in range(N):
-            analyzers.append(Analyzer(w_list[n], bLowpass_list[n]))
+            analyzers.append(Analyzer(w[n], bLowpass_list[n]))
         self.analyzers = analyzers
 
-    def initialize_synthesizers(self, w_list):
+    def initialize_synthesizers(self, w):
         '''
         initialize_synthesizers(self, w_list): initializes each synthesizer
         in the vocoder based on the given center frequencies
@@ -52,13 +65,13 @@ class PhaseVocoder:
         '''
         # initialize the synthesizers
         synthesizers = []
-        for w in w_list:
-            synthesizers.append(Synthesizer(w))
+        for wp in np.nditer(w):
+            synthesizers.append(Synthesizer(wp))
         self.synthesizers = synthesizers
 
     ### processing methods
 
-    def process_signal(self, x, t, T):
+    def process_signal(self, x, t):
         '''
         process_signal(self, x, t, T): processes a single signal using the
         phase vocoder analysis/synthesis procedure
@@ -70,14 +83,14 @@ class PhaseVocoder:
         T:
         '''
         # analyze the signal
-        (mags, phases) = self.analyze(x, t, T)
+        (mags, phases) = self.analyze(x, t)
         #TODO: detect the pitch of the incoming signal
         #TODO: calculate the necessary shift for the vocoder
         # synthesize a synthetic signal based on the analyzer outputs
         #TODO: feed the pitch shift information to the synthesizer
-        return self.sythesize(t, mags, phases)
+        return self.synthesize(t, mags, phases)
 
-    def analyze(self, x, t, T):
+    def analyze(self, x, t):
         '''
         analyze(self, x, t, T): analyzes the incoming signal with the 
         analyzers defined during the instantiation of the given instance
@@ -92,12 +105,12 @@ class PhaseVocoder:
         mags = []
         phases = []
         for analyzer in self.analyzers:
-            (mag, phase) = analyzer.analyze(x, t, T)
+            (mag, phase) = analyzer.analyze(x, t)
             mags.append(mag)
             phases.append(phase)
         return mags, phases
 
-    def synthesize(self, t, mags, phases):
+    def synthesize(self, t,  mags, phases):
         '''
         synthesize(self, t, mags, phases): synthesizes a signal based on given
         analyzer outputs and the synthesizers defined for the given instance
@@ -118,7 +131,7 @@ class PhaseVocoder:
         else:
             N = len(mags)
         # initialize the signal vector
-        x = np.zeros((t.size,))
+        x = np.zeros((mags[0].size,))
         # iteratively add the harmonics from the analyzer
         for n in range(N):
             #TODO: feed the pitch shift information to the individual synthesizers
